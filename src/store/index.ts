@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
-interface Store {
+interface Store<T> {
     listenerIdCounter: number;
     id: number;
-    state: any;
+    state: T;
     listeners: Record<number, () => void>;
     subscribe: (listenerUpdaterFunction: () => void) => number;
     unsubscribe: (listenerId: number) => void;
@@ -11,16 +11,18 @@ interface Store {
 
 interface Storage {
     idCounter: number;
-    addStore: (initialState: any) => number;
-    stores: Record<number, Store>;
-    updateStoreState: (storeId: number, newState: any) => void;
+    addStore: <T>(initialState: T) => number;
+    stores: {
+        [key: number]: Store<any>;
+    };
+    updateStoreState: <T>(storeId: number, newState: T) => void;
 }
 
 const storage: Storage = {
     idCounter: 0,
 
-    addStore(initialState: any) {
-        const newStore: Store = {
+    addStore<T>(initialState: T) {
+        const newStore: Store<T> = {
             listenerIdCounter: 0,
             id: this.idCounter,
             state: initialState,
@@ -45,28 +47,28 @@ const storage: Storage = {
 
     stores: {},
 
-    updateStoreState(storeId: number, newState: any) {
+    updateStoreState<T>(storeId: number, newState: T) {
         const storeToUpdate = this.stores[storeId];
         storeToUpdate.state = newState;
 
-        Object.entries(storeToUpdate.listeners).forEach(
-            ([listenerId, listenerUpdaterFunction]) => {
+        Object.values(storeToUpdate.listeners).forEach(
+            (listenerUpdaterFunction) => {
                 listenerUpdaterFunction();
             }
         );
     },
 };
 
-export function createStore(initialState: any): number {
+export function createStore<T>(initialState: T): number {
     const newStoreId = storage.addStore(initialState);
 
     return newStoreId;
 }
 
-export function useStore(storeId: number): any {
+export function useStore<T>(storeId: number): [T, (newState: any) => void] {
     const [, setCount] = useState(0);
 
-    const state = storage.stores[storeId].state;
+    const state: T = storage.stores[storeId].state;
 
     function setState(newState: any) {
         storage.updateStoreState(storeId, newState);
